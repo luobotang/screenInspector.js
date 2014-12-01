@@ -19,22 +19,34 @@
 
 })(function ($, window, document) {
 
-	var setting = {};
+	var setting = {}, // {'start-end': 'className', ...}
+		ranges = []; // [[startWidth, endWidth, className], ...]
 
 	function config(options) {
 		$.extend(setting, options);
+		setting2ranges();
 		return this;
 	}
 
-	function checkWidth(width) {
+	// 将用户配置转为更便于使用的数组形式。
+	function setting2ranges() {
+		ranges = [];
 		for (var k in setting) {
 			if (setting.hasOwnProperty(k)) {
 				var range = key2widthRange(k);
-				if (width > range[0] && width <= range[1]) {
-					$('body').addClass(setting[k]);
-				} else {
-					$('body').removeClass(setting[k]);
-				}
+				range.push(setting[k]);
+				ranges.push(range);
+			}
+		}
+	}
+
+	function checkWidth(width) {
+		for (var i = 0, range, len = ranges.length; i < len; i++) {
+			range = ranges[i];
+			if (width > range[0] && width <= range[1]) {
+				$('body').addClass(range[2]);
+			} else {
+				$('body').removeClass(range[2]);
 			}
 		}
 	}

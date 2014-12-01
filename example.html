@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>示例 - ScreenInspector.js</title>
+<style>
+* { margin: 0; padding: 0 }
+/* normal */
+.container {
+	margin: 0 auto;
+	width: 900px;
+}
+.box {
+	float: left;
+	width: 400px;
+	height: 400px;
+	margin-right: 50px;
+	margin-top: 50px;
+	background: #f99;
+	line-height: 400px;
+	font-size: 100px;
+	text-align: center;
+	font-family: arial, sans-serif;
+	color: #fff;
+}
+/* small & big */
+body.small .container {
+	width: 500px;
+}
+body.small .box {
+	background: #9f9;
+	height: 200px;
+	line-height: 200px;
+	border-radius: 100px;
+}
+body.big .container {
+	width: 1800px;
+}
+body.big .box {
+	background: #99f;
+	border-radius: 200px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+	<div class="box">1</div>
+	<div class="box">2</div>
+	<div class="box">3</div>
+	<div class="box">4</div>
+	<div class="box">5</div>
+	<div class="box">6</div>
+	<div class="box">7</div>
+	<div class="box">8</div>
+</div>
+
+<script src="../jquery.js"></script>
+<script src="screenInspector.js"></script>
+<script>
+screenInspector.config({
+	'-900': 'small',
+	'900-1800': 'normal',
+	'1800-': 'big'
+});
+</script>
+</body>
+</html>
