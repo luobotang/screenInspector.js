@@ -17,7 +17,7 @@ screenInspector.config({
 依赖
 ----
 
-jQuery （对，就是那个 jQuery....）
+-  jQuery （对，就是那个 jQuery....）
 
 使用方法
 --------
