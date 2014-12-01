@@ -24,7 +24,7 @@ jQuery （对，就是那个 jQuery....）
 
 以全局变量 screenInspector 暴露方法，提供两个方法：
 
--  config(options)：配置要检测的宽度范围序列，以及对应要添加的样式
--  refresh()：手动触发一次宽度检测
+-  ```config(options)```：配置要检测的宽度范围序列，以及对应要添加的样式
+-  ```refresh()```：手动触发一次宽度检测
 
 宽度范围为 "start-end" 的形式，不包含 start，包含 end，也就是 (start, end]。
