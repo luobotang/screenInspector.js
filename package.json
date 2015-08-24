@@ -1,0 +1,32 @@
+{
+  "name": "screen-inspector",
+  "version": "0.1.0",
+  "description": "screenInspector.js\r ==================",
+  "main": "index.js",
+  "scripts": {
+    "test": "start test/test.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luobotang/screenInspector.js.git"
+  },
+  "author": "luobotang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/luobotang/screenInspector.js/issues"
+  },
+  "homepage": "https://github.com/luobotang/screenInspector.js#readme",
+  "devDependencies": {
+    "domready": "^0.3.0",
+    "grunt": "^0.4.5",
+    "grunt-browserify": "^4.0.0",
+    "grunt-contrib-uglify": "^0.9.1"
+  },
+  "dependencies": {
+    "classie": "^1.0.0",
+    "domready": "^0.3.0",
+    "eventie": "^1.0.6",
+    "extend": "^3.0.0",
+    "window-size": "^0.1.2"
+  }
+}

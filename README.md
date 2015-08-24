@@ -14,13 +14,6 @@ screenInspector.config({
 });
 ```
 
-请打开 example.html 以查看效果。
-
-依赖
-----
-
--  jQuery （对，就是那个 jQuery....）
-
 使用方法
 --------
 
