@@ -1,4 +1,4 @@
-/* screen-inspector v0.1.0 by luobotang build 2015-08-24 */
+/* screen-inspector v0.1.0 by luobotang build 2015-08-25 */
 
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 window.ScreenInspector = require('./lib/screen-inspector')
@@ -6,436 +6,124 @@ window.ScreenInspector = require('./lib/screen-inspector')
 /*
  * 监测屏幕宽度，根据配置切换 body 样式
  * e.g.
- * ScreenInspector.config({
+ * ScreenInspector({
  *   '-990': 'small', // 浏览器宽度小于等于 990px 时为 body 添加样式 "small"
  *   '990-1400': 'normal', // 宽度范围 (990px, 1400px] 时添加样式 "normal"
  *   '1400-': 'wide' // 宽度大于 1400px 时添加样式 "wide"
- * }).refresh();
+ * })
  */
 
 var domready = require('domready')
 var extend = require('extend')
 var eventie = require('eventie')
-var classie = require('classie')
+var ClassList = require('luobotang-classlist')
+var getWindowSize = require('get-window-size')
 
-var setting = {} // {'start-end': 'className', ...}
-var ranges = [] // [[startWidth, endWidth, className], ...]
+/*
+ * {'min-max': 'className', ...}
+ */
+var setting = {}
+/*
+ * {RangeObject[]}
+ */
+var ranges = []
 
-var body
+/*
+ * @type RangeObject
+ * @property {number} min
+ * @property {number} max
+ * @property {string} className
+ */
+
+var TIME_DELAY_SIZE_CHANGE = 100
+var MIN_MIN = 0
+var MAX_MAX = Infinity
+
+var bodyClassList
 var inited = false
 
-function config(options) {
-	extend(setting, options);
-	setting2ranges();
-	return this;
-}
-
 // 将用户配置转为更便于使用的数组形式。
-function setting2ranges() {
-	ranges = [];
-	for (var k in setting) {
-		if (setting.hasOwnProperty(k)) {
-			var range = key2widthRange(k);
-			range.push(setting[k]);
-			ranges.push(range);
+function reset(options) {
+	extend(setting, options)
+	ranges = []
+	var range
+	var className
+	for (range in setting) {
+		if (setting.hasOwnProperty(range)) {
+			className = setting[range]
+			range = makeRange(range, className)
+			if (range) {
+				ranges.push(range)
+			}
 		}
 	}
 }
 
-function checkWidth(width) {
-	for (var i = 0, range, len = ranges.length; i < len; i++) {
-		range = ranges[i];
-		if (width > range[0] && width <= range[1]) {
-			classie.addClass(body, range[2]);
-		} else {
-			classie.removeClass(body, range[2]);
-		}
+/*
+ * @param {string} rangeStr - 'min-max'
+ * @param {string} className
+ * @returns {RangeObject} 
+ */
+function makeRange(rangeStr, className) {
+	var idx = rangeStr.indexOf('-')
+	if (idx === -1) return null
+	var min = parseInt(rangeStr.slice(0, idx), 10) || MIN_MIN
+	var max = parseInt(rangeStr.slice(idx + 1), 10) || MAX_MAX
+	return {
+		min: min,
+		max: max,
+		className: className
 	}
-}
-
-function key2widthRange(key) {
-	if (!key || !key.indexOf || key.indexOf('-') < 0) {
-		return [0, 0];
-	}
-	key = key.split('-');
-	return [+key[0] || 0, +key[1] || Infinity];
-}
-
-function getWindowWidth() {
-	// TODO get window width !!!!
-	return window.innerWidth;
 }
 
 function refresh() {
-	if (inited) {
-		var width = getWindowWidth();
-		checkWidth(width);
+	var width = getWindowSize().width
+	var i = 0
+	var len = ranges.length
+	var range
+	var min
+	var max
+	for (; i < len; i++) {
+		range = ranges[i]
+		// (range.min, range.max]
+		if (width > range.min && width <= range.max) {
+			bodyClassList.add(range.className)
+		} else {
+			bodyClassList.remove(range.className)
+		}
 	}
 }
 
 function init() {
-	inited = true;
-	body = document.getElementsByTagName('body')[0]
-	var t;
-	eventie.bind(window, 'resize', function () {
-		if (t) {
-			clearTimeout(t);
-		}
-		t = setTimeout(function () {
-			refresh();
-			t = null;
-		}, 100);
-	});
+	bodyClassList = ClassList(document.getElementsByTagName('body')[0])
+
 	// 初始化后触发一次监测，确保在初始化前配置的参数得以应用。
 	refresh();
+
+	// 延迟刷新，降低运算频率
+	var timer
+	eventie.bind(window, 'resize', function () {
+		if (timer) clearTimeout(timer)
+		timer = setTimeout(function () {
+			timer = null;
+			refresh();
+		}, TIME_DELAY_SIZE_CHANGE)
+	});
 }
 
-// 页面加载后开始监测窗口宽度变化
-domready(init)
-
-module.exports = {
-	config: config,
-	refresh: refresh
-}
-},{"classie":3,"domready":6,"eventie":7,"extend":8}],3:[function(require,module,exports){
-/*
- * classie
- * http://github.amexpub.com/modules/classie
- *
- * Copyright (c) 2013 AmexPub. All rights reserved.
- */
-
-module.exports = require('./lib/classie');
-
-},{"./lib/classie":5}],4:[function(require,module,exports){
-/* 
- * classList.js: Cross-browser full element.classList implementation.
- * 2014-07-23
- *
- * By Eli Grey, http://eligrey.com
- * Public Domain.
- * NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
- */
-
-/*global self, document, DOMException, DOMTokenList */
-
-/*! @source http://purl.eligrey.com/github/classList.js/blob/master/classList.js*/
-
-if ("document" in self) {
-
-    // Full polyfill for browsers with no classList support
-    if (!("classList" in document.createElement("_")) || document.createElementNS && !("classList" in document.createElementNS("http://www.w3.org/2000/svg", "g"))) {
-
-        (function(view) {
-
-            "use strict";
-
-            if (!('Element' in view)) {
-                return;
-            }
-
-            var classListProp = "classList",
-                protoProp = "prototype",
-                elemCtrProto = view.Element[protoProp],
-                objCtr = Object,
-                strTrim = String[protoProp].trim || function() {
-                    return this.replace(/^\s+|\s+$/g, "");
-                }, arrIndexOf = Array[protoProp].indexOf || function(item) {
-                    var
-                    i = 0,
-                        len = this.length;
-                    for (; i < len; i++) {
-                        if (i in this && this[i] === item) {
-                            return i;
-                        }
-                    }
-                    return -1;
-                },
-                // Vendors: please allow content code to instantiate DOMExceptions
-                DOMEx = function(type, message) {
-                    this.name = type;
-                    this.code = DOMException[type];
-                    this.message = message;
-                }, checkTokenAndGetIndex = function(classList, token) {
-                    if (token === "") {
-                        throw new DOMEx(
-                            "SYNTAX_ERR", "An invalid or illegal string was specified");
-                    }
-                    if (/\s/.test(token)) {
-                        throw new DOMEx(
-                            "INVALID_CHARACTER_ERR", "String contains an invalid character");
-                    }
-                    return arrIndexOf.call(classList, token);
-                }, ClassList = function(elem) {
-                    var
-                    trimmedClasses = strTrim.call(elem.getAttribute("class") || ""),
-                        classes = trimmedClasses ? trimmedClasses.split(/\s+/) : [],
-                        i = 0,
-                        len = classes.length;
-                    for (; i < len; i++) {
-                        this.push(classes[i]);
-                    }
-                    this._updateClassName = function() {
-                        elem.setAttribute("class", this.toString());
-                    };
-                }, classListProto = ClassList[protoProp] = [],
-                classListGetter = function() {
-                    return new ClassList(this);
-                };
-            // Most DOMException implementations don't allow calling DOMException's toString()
-            // on non-DOMExceptions. Error's toString() is sufficient here.
-            DOMEx[protoProp] = Error[protoProp];
-            classListProto.item = function(i) {
-                return this[i] || null;
-            };
-            classListProto.contains = function(token) {
-                token += "";
-                return checkTokenAndGetIndex(this, token) !== -1;
-            };
-            classListProto.add = function() {
-                var
-                tokens = arguments,
-                    i = 0,
-                    l = tokens.length,
-                    token, updated = false;
-                do {
-                    token = tokens[i] + "";
-                    if (checkTokenAndGetIndex(this, token) === -1) {
-                        this.push(token);
-                        updated = true;
-                    }
-                }
-                while (++i < l);
-
-                if (updated) {
-                    this._updateClassName();
-                }
-            };
-            classListProto.remove = function() {
-                var
-                tokens = arguments,
-                    i = 0,
-                    l = tokens.length,
-                    token, updated = false,
-                    index;
-                do {
-                    token = tokens[i] + "";
-                    index = checkTokenAndGetIndex(this, token);
-                    while (index !== -1) {
-                        this.splice(index, 1);
-                        updated = true;
-                        index = checkTokenAndGetIndex(this, token);
-                    }
-                }
-                while (++i < l);
-
-                if (updated) {
-                    this._updateClassName();
-                }
-            };
-            classListProto.toggle = function(token, force) {
-                token += "";
-
-                var
-                result = this.contains(token),
-                    method = result ?
-                        force !== true && "remove" :
-                        force !== false && "add";
-
-                if (method) {
-                    this[method](token);
-                }
-
-                if (force === true || force === false) {
-                    return force;
-                } else {
-                    return !result;
-                }
-            };
-            classListProto.toString = function() {
-                return this.join(" ");
-            };
-
-            if (objCtr.defineProperty) {
-                var classListPropDesc = {
-                    get: classListGetter,
-                    enumerable: true,
-                    configurable: true
-                };
-                try {
-                    objCtr.defineProperty(elemCtrProto, classListProp, classListPropDesc);
-                } catch (ex) { // IE 8 doesn't support enumerable:true
-                    if (ex.number === -0x7FF5EC54) {
-                        classListPropDesc.enumerable = false;
-                        objCtr.defineProperty(elemCtrProto, classListProp, classListPropDesc);
-                    }
-                }
-            } else if (objCtr[protoProp].__defineGetter__) {
-                elemCtrProto.__defineGetter__(classListProp, classListGetter);
-            }
-
-        }(self));
-
-    } else {
-        // There is full or partial native classList support, so just check if we need
-        // to normalize the add/remove and toggle APIs.
-
-        (function() {
-            "use strict";
-
-            var testElement = document.createElement("_");
-
-            testElement.classList.add("c1", "c2");
-
-            // Polyfill for IE 10/11 and Firefox <26, where classList.add and
-            // classList.remove exist but support only one argument at a time.
-            if (!testElement.classList.contains("c2")) {
-                var createMethod = function(method) {
-                    var original = DOMTokenList.prototype[method];
-
-                    DOMTokenList.prototype[method] = function(token) {
-                        var i, len = arguments.length;
-
-                        for (i = 0; i < len; i++) {
-                            token = arguments[i];
-                            original.call(this, token);
-                        }
-                    };
-                };
-                createMethod('add');
-                createMethod('remove');
-            }
-
-            testElement.classList.toggle("c3", false);
-
-            // Polyfill for IE 10 and Firefox <24, where classList.toggle does not
-            // support the second argument.
-            if (testElement.classList.contains("c3")) {
-                var _toggle = DOMTokenList.prototype.toggle;
-
-                DOMTokenList.prototype.toggle = function(token, force) {
-                    if (1 in arguments && !this.contains(token) === !force) {
-                        return force;
-                    } else {
-                        return _toggle.call(this, token);
-                    }
-                };
-
-            }
-
-            testElement = null;
-        }());
-    }
-
+function config(options) {
+	reset(options)
+	if (!inited) {
+		inited = true
+		// 页面加载后开始监测窗口宽度变化
+		domready(init)
+	} else {
+		refresh()
+	}
 }
 
-},{}],5:[function(require,module,exports){
-/*!
- * classie - class helper functions
- * from bonzo https://github.com/ded/bonzo
- * 
- * classie.has( elem, 'my-class' ) -> true/false
- * classie.add( elem, 'my-new-class' )
- * classie.remove( elem, 'my-unwanted-class' )
- * classie.toggle( elem, 'my-class' )
- */
-
-/*jshint browser: true, strict: true, undef: true */
-/*global define: false */
-'use strict';
-
-// class helper functions from bonzo https://github.com/ded/bonzo
-var classList = require('./class_list_ployfill'),
-    classie;
-
-function classReg(className) {
-    return new RegExp("(^|\\s+)" + className + "(\\s+|$)");
-}
-
-function noop() {}
-
-function isArr(classes) {
-    if (Array.isArray(classes)) {
-        return true;
-    } else if (Object.prototype.toString.call(classes) === '[object Array]') {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-function removeMultiple() {
-    var c = arguments[1],
-        elem = arguments[0];
-    c.forEach(function(value) {
-        if (classie.has(elem, value)) {
-            noop();
-        }
-        classie.removeClass(elem, value);
-    });
-}
-
-
-function addMultiple() {
-    var c = arguments[1],
-        elem = arguments[0];
-    c.forEach(function(value) {
-        if (classie.has(elem, value)) {
-            noop();
-        }
-        classie.addClass(elem, value);
-    });
-}
-
-function hasClass(elem, c) {
-    return elem.classList.contains(c);
-}
-
-function addClass(elem, c) {
-    if (isArr(c)) {
-        addMultiple.apply(this, arguments);
-    } else {
-        elem.classList.add(c);
-    }
-}
-
-function removeClass(elem, c) {
-    if (isArr(c)) {
-        removeMultiple.apply(this, arguments);
-    } else {
-        elem.classList.remove(c);
-    }
-}
-
-function toggleClass(elem, c) {
-    var fn = hasClass(elem, c) ? removeClass : addClass;
-    fn(elem, c);
-}
-
-var classie = {
-    // full names
-    hasClass: hasClass,
-    addClass: addClass,
-    removeClass: removeClass,
-    toggleClass: toggleClass,
-    // short names
-    has: hasClass,
-    add: addClass,
-    remove: removeClass,
-    toggle: toggleClass
-};
-
-// transport
-
-if (typeof module === "object" && module && typeof module.exports === "object") {
-    // commonjs / browserify
-    module.exports = classie;
-} else {
-    // AMD
-    define(classie);
-}
-
-},{"./class_list_ployfill":4}],6:[function(require,module,exports){
+module.exports = config
+},{"domready":3,"eventie":4,"extend":5,"get-window-size":6,"luobotang-classlist":7}],3:[function(require,module,exports){
 /*!
   * domready (c) Dustin Diaz 2012 - License MIT
   */
@@ -492,7 +180,7 @@ if (typeof module === "object" && module && typeof module.exports === "object") 
     })
 })
 
-},{}],7:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /*!
  * eventie v1.0.6
  * event binding helper
@@ -576,7 +264,7 @@ if ( typeof define === 'function' && define.amd ) {
 
 })( window );
 
-},{}],8:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -664,4 +352,241 @@ module.exports = function extend() {
 };
 
 
+},{}],6:[function(require,module,exports){
+/*
+ * http://andylangton.co.uk/blog/development/get-viewport-size-width-and-height-javascript
+ */
+(function (getWindowSize) {
+
+	if (typeof exports === 'object') {
+		module.exports = getWindowSize
+	} else {
+		window.getWindowSize = getWindowSize
+	}
+
+})(function () {
+
+	var viewportwidth
+	var viewportheight
+
+	if (typeof window.innerWidth != 'undefined') {
+		viewportwidth = window.innerWidth
+		viewportheight = window.innerHeight
+	}
+	else if (
+		typeof document.documentElement != 'undefined' &&
+		typeof document.documentElement.clientWidth != 'undefined' &&
+		document.documentElement.clientWidth != 0) {
+		viewportwidth = document.documentElement.clientWidth
+		viewportheight = document.documentElement.clientHeight
+	}
+	else {
+		var body = document.getElementsByTagName('body')[0]
+		viewportwidth = body.clientWidth
+		viewportheight = body.clientHeight
+	}
+
+	return {
+		width: viewportwidth,
+		height: viewportheight
+	}
+})
+
+},{}],7:[function(require,module,exports){
+/**
+ * Module dependencies.
+ */
+
+var index = require('component-indexof');
+
+/**
+ * Whitespace regexp.
+ */
+
+var re = /\s+/;
+
+/**
+ * toString reference.
+ */
+
+var toString = Object.prototype.toString;
+
+/**
+ * Wrap `el` in a `ClassList`.
+ *
+ * @param {Element} el
+ * @return {ClassList}
+ * @api public
+ */
+
+module.exports = function(el){
+  return new ClassList(el);
+};
+
+/**
+ * Initialize a new ClassList for `el`.
+ *
+ * @param {Element} el
+ * @api private
+ */
+
+function ClassList(el) {
+  if (!el || !el.nodeType) {
+    throw new Error('A DOM element reference is required');
+  }
+  this.el = el;
+  this.list = el.classList;
+}
+
+/**
+ * Add class `name` if not already present.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.add = function(name){
+  // classList
+  if (this.list) {
+    this.list.add(name);
+    return this;
+  }
+
+  // fallback
+  var arr = this.array();
+  var i = index(arr, name);
+  if (!~i) arr.push(name);
+  this.el.className = arr.join(' ');
+  return this;
+};
+
+/**
+ * Remove class `name` when present, or
+ * pass a regular expression to remove
+ * any which match.
+ *
+ * @param {String|RegExp} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.remove = function(name){
+  if ('[object RegExp]' == toString.call(name)) {
+    return this.removeMatching(name);
+  }
+
+  // classList
+  if (this.list) {
+    this.list.remove(name);
+    return this;
+  }
+
+  // fallback
+  var arr = this.array();
+  var i = index(arr, name);
+  if (~i) arr.splice(i, 1);
+  this.el.className = arr.join(' ');
+  return this;
+};
+
+/**
+ * Remove all classes matching `re`.
+ *
+ * @param {RegExp} re
+ * @return {ClassList}
+ * @api private
+ */
+
+ClassList.prototype.removeMatching = function(re){
+  var arr = this.array();
+  for (var i = 0; i < arr.length; i++) {
+    if (re.test(arr[i])) {
+      this.remove(arr[i]);
+    }
+  }
+  return this;
+};
+
+/**
+ * Toggle class `name`, can force state via `force`.
+ *
+ * For browsers that support classList, but do not support `force` yet,
+ * the mistake will be detected and corrected.
+ *
+ * @param {String} name
+ * @param {Boolean} force
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.toggle = function(name, force){
+  // classList
+  if (this.list) {
+    if ("undefined" !== typeof force) {
+      if (force !== this.list.toggle(name, force)) {
+        this.list.toggle(name); // toggle again to correct
+      }
+    } else {
+      this.list.toggle(name);
+    }
+    return this;
+  }
+
+  // fallback
+  if ("undefined" !== typeof force) {
+    if (!force) {
+      this.remove(name);
+    } else {
+      this.add(name);
+    }
+  } else {
+    if (this.has(name)) {
+      this.remove(name);
+    } else {
+      this.add(name);
+    }
+  }
+
+  return this;
+};
+
+/**
+ * Return an array of classes.
+ *
+ * @return {Array}
+ * @api public
+ */
+
+ClassList.prototype.array = function(){
+  var className = this.el.className;
+  var str = className.replace(/^\s+|\s+$/g, '');
+  var arr = str.split(re);
+  if ('' === arr[0]) arr.shift();
+  return arr;
+};
+
+/**
+ * Check if class `name` is present.
+ *
+ * @param {String} name
+ * @return {ClassList}
+ * @api public
+ */
+
+ClassList.prototype.has =
+ClassList.prototype.contains = function(name){
+  return this.list
+    ? this.list.contains(name)
+    : !! ~index(this.array(), name);
+};
+
+},{"component-indexof":8}],8:[function(require,module,exports){
+module.exports = function(arr, obj){
+  if (arr.indexOf) return arr.indexOf(obj);
+  for (var i = 0; i < arr.length; ++i) {
+    if (arr[i] === obj) return i;
+  }
+  return -1;
+};
 },{}]},{},[1]);

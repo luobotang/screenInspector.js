@@ -12,21 +12,18 @@
 }
 .box {
 	float: left;
-	width: 400px;
-	height: 400px;
-	margin-right: 50px;
-	margin-top: 50px;
+	width: 350px;
+	height: 350px;
+	margin: 50px;
 	background: #f99;
-	line-height: 400px;
+	line-height: 350px;
 	font-size: 100px;
 	text-align: center;
 	font-family: arial, sans-serif;
 	color: #fff;
 }
 /* small & big */
-body.small .container {
-	width: 500px;
-}
+body.small .container { width: 500px; }
 body.small .box {
 	background: #9f9;
 	height: 200px;
@@ -40,6 +37,8 @@ body.big .box {
 	background: #99f;
 	border-radius: 200px;
 }
+body.medium .container { background-color: #eee }
+body.medium .box { background-color: #333 }
 </style>
 </head>
 <body>
@@ -57,11 +56,17 @@ body.big .box {
 
 <script src="../build/screen-inspector.js"></script>
 <script>
-ScreenInspector.config({
+ScreenInspector({
 	'-900': 'small',
 	'900-1800': 'normal',
 	'1800-': 'big'
 });
+
+setTimeout(function () {
+	ScreenInspector({
+		'1000-1400': 'medium'
+	})
+}, 5000);
 </script>
 </body>
 </html>
